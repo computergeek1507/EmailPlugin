@@ -9,6 +9,7 @@ using System.Windows.Forms;
 using System.IO;
 using System.Net.Mail;
 using System.Net;
+using AegisImplicitMail;
 
 namespace EmailPlugin
 {
@@ -19,17 +20,13 @@ namespace EmailPlugin
 
 
 		//bool _emailing = false;
-		EmailSettings _settings;
-
-		//int _pictureWidth = 0;
-		//int _pictureHeight = 0;
-		//int _frame = 0;
+		EmailSettings _settings = new EmailSettings();
 
 		public string _showDir = "";
 
 		public string GetMenuString()
 		{
-			return "Email Plugin";
+			return "EmailPlugin";
 		}
 		public string GetWebFolder()
 		{
@@ -96,6 +93,7 @@ namespace EmailPlugin
 				var path = _showDir + "//EmailPlugin.xml";
 				if (!System.IO.File.Exists(path))
 				{
+					WriteError("EmailPlugin.xml not found in '" + _showDir+ "'");
 					return false;
 				}
 				System.Xml.Serialization.XmlSerializer reader = new System.Xml.Serialization.XmlSerializer(typeof(EmailSettings));
@@ -106,7 +104,8 @@ namespace EmailPlugin
 			}
 			catch (Exception ex)
 			{
-				MessageBox.Show(ex.Message);
+				WriteError("Throw: '" + ex.Message + "'");
+				//MessageBox.Show(ex.Message);
 				return false;
 			}
 		}
@@ -129,12 +128,12 @@ namespace EmailPlugin
 		{
 			if (command.ToLower() == "sendemail")
 			{
-				if (SendEmail(parameters, parameters))
+				if (SendEmail2(parameters, parameters))
 				{
-					msg = "Sending email.";
+					msg = "Sent Email.";
 					return true;
 				}
-				msg = "Sending email Failed.";
+				msg = "Sending Email Failed.";
 				return false;
 			}
 			msg = "Command not support.";
@@ -144,7 +143,7 @@ namespace EmailPlugin
 		/// <summary>
 		/// This Sends the Email, I hope.
 		/// </summary>
-		bool SendEmail(string subject, string body)
+		bool SendEmail2(string subject, string body)
 		{
 			if (string.IsNullOrEmpty(_settings.Server) ||
 				string.IsNullOrEmpty(_settings.FromEmail) ||
@@ -152,29 +151,78 @@ namespace EmailPlugin
 				string.IsNullOrEmpty(_settings.Username) ||
 				string.IsNullOrEmpty(_settings.Password))
 			{
+				WriteError("settings was empty in EmailPlugin.xml: '" + _showDir + "'");
 				return false;
 			}
-				//if (_emailing)
-				//	return false;
-				//_emailing = true;
 			try
 			{
-				var smtpClient = new SmtpClient(_settings.Server)
+				var mymessage = new MimeMailMessage();
+				mymessage.From = new MimeMailAddress(_settings.FromEmail);
+				mymessage.To.Add(_settings.ToEmail);
+				mymessage.Subject = subject;
+				mymessage.Body = body;
+
+				//Create Smtp Client
+				var mailer = new MimeMailer(_settings.Server, _settings.Port);
+				mailer.User = _settings.Username;
+				mailer.Password = _settings.Password;
+				mailer.Timeout = 5000;
+				var secType = _settings.Security.ToLower();
+				if (secType.Contains("ssl"))
 				{
-					Port = _settings.Port,
-					Credentials = new NetworkCredential(_settings.Username, _settings.Password),
-					EnableSsl = _settings.UseSSL,
-				};
+					mailer.SslType = SslMode.Ssl;
+				}
+				else if (secType.Contains("tls"))
+				{
+					mailer.SslType = SslMode.Tls;
+				}
+				else if (secType.Contains("none") || secType.Contains("no") || secType.Contains("false"))
+				{
+					mailer.SslType = SslMode.None;
+				}
+				else
+				{
+					mailer.SslType = SslMode.Auto;
+				}
 
-				smtpClient.Send(_settings.FromEmail, _settings.ToEmail, subject, body);
+				mailer.AuthenticationMode = AuthenticationType.Base64;
+
+				if (!mailer.TestConnection())
+				{
+					WriteError("Failed to connect to : '" + _settings.Server + "'");
+				}
+
+				mailer.SendMailAsync(mymessage);
 				return true;
-			}
-			catch (Exception )
+				}
+			catch (Exception ex)
 			{
-
+				WriteError("Throw: '" + ex.Message + "'");
 			}
 			return false;
-			//_emailing = false;
+		}
+
+		void WriteError(string error)
+		{
+			try
+			{
+				var path = _showDir + "//EmailError.txt";
+				using (StreamWriter sw = new StreamWriter(path))
+				{
+					sw.WriteLine(error);
+					sw.WriteLine("Server: " + _settings.Server);
+					sw.WriteLine("Port: " + _settings.Port.ToString());
+					sw.WriteLine("FromEmail: " + _settings.FromEmail);
+					sw.WriteLine("ToEmail: " + _settings.ToEmail);
+					sw.WriteLine("Username: " + _settings.Username);
+					sw.WriteLine("Security: " + _settings.Security);
+					//sw.WriteLine("Password: " + _settings.Password);
+				}
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(ex.Message);
+			}
 		}
 	}
 }

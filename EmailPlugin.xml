@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<EmailSettings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <FromEmail>test@test.com</FromEmail>
+  <ToEmail>test@test.com</ToEmail>
+  <Server>mail.test.com</Server>
+  <Username>test@test.com</Username>
+  <Password>password</Password>
+  <Port>587</Port>
+  <Security>none</Security>
+</EmailSettings>
