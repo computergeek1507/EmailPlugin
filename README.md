@@ -7,5 +7,4 @@ Email Plugin for xSchedule
 * Create a Event or Playlist Step to Trigger email. 
 * If encounter errors check "EmailError.txt" in show directory.
 
-![Ping Email Event](https://github.com/computergeek1507/PB_16/raw/main/EmailPlugin.png)
-
+![Ping Email Event](https://github.com/computergeek1507/EmailPlugin/raw/main/EmailPlugin.png)
